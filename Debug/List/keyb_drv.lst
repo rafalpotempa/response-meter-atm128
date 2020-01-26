@@ -1,0 +1,180 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V6.80.5.1069 for Atmel AVR           09/Dec/2019  08:35:46
+# Copyright 1996-2016 IAR Systems AB.
+# Standalone license - IAR Embedded Workbench for Atmel AVR
+#
+#    Source file  =  D:\lab_15\lib\keyb_drv.c
+#    Command line =  
+#        D:\lab_15\lib\keyb_drv.c --cpu=m128 -ms -o
+#        D:\lab_15\lab_10_lcd_printf\Debug\Obj -lC
+#        D:\lab_15\lab_10_lcd_printf\Debug\List -y --initializers_in_flash
+#        --no_cse --no_inline --no_code_motion --no_cross_call --no_clustering
+#        --no_tbaa --debug -DENABLE_BIT_DEFINITIONS -e -I ..\lib\ --eeprom_size
+#        4096 --clib -Ol
+#    Locale       =  Polish_Poland.1250
+#    List file    =  D:\lab_15\lab_10_lcd_printf\Debug\List\keyb_drv.lst
+#    Object file  =  D:\lab_15\lab_10_lcd_printf\Debug\Obj\keyb_drv.r90
+#
+###############################################################################
+
+D:\lab_15\lib\keyb_drv.c
+      1          #include <ioavr.h>
+
+   \                                 In  segment ABSOLUTE, at 0x21
+   \   union <unnamed> volatile __io _A_PINE
+   \                     _A_PINE:
+   \   00000000                      DS8 1
+      2          #include <string.h>
+      3          #include "keyb_drv.h"
+      4          #include "queue.h"
+      5          
+      6          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+      7          static void kbAddKey(TQueue *q, unsigned char val, unsigned char id)
+   \                     kbAddKey:
+      8          {
+   \   00000000   ........           CALL    ?PROLOGUE4_L09
+   \   00000004   01C8               MOVW    R25:R24, R17:R16
+   \   00000006   2FB2               MOV     R27, R18
+   \   00000008   2FA3               MOV     R26, R19
+      9          	do {
+     10          		if(val & 0x01)
+   \                     ??kbAddKey_0:
+   \   0000000A   FBB0               BST     R27, 0
+   \   0000000C   F426               BRTC    ??kbAddKey_1
+     11          			qAdd(q, id);
+   \   0000000E   2F2A               MOV     R18, R26
+   \   00000010   018C               MOVW    R17:R16, R25:R24
+   \   00000012   ........           CALL    qAdd
+     12          		++id;
+   \                     ??kbAddKey_1:
+   \   00000016   95A3               INC     R26
+     13          	   	val = val >> 1;
+   \   00000018   95B6               LSR     R27
+     14          	} while(val);
+   \   0000001A   23BB               TST     R27
+   \   0000001C   F7B1               BRNE    ??kbAddKey_0
+     15          }
+   \   0000001E   E0E4               LDI     R30, 4
+   \   00000020   ........           JMP     ?EPILOGUE_B4_L09
+     16          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     17          void kbService(TQueue *q)
+   \                     kbService:
+     18          {
+   \   00000000   ........           CALL    ?PROLOGUE3_L09
+   \   00000004   01C8               MOVW    R25:R24, R17:R16
+     19          //Global but private variables -> static
+     20          	static unsigned char kb_buf[4] = {0,0,0,0};
+     21          //Local variables
+     22          unsigned char *kbp;
+     23          unsigned char key_down;
+     24          unsigned char key_up;
+     25          unsigned char cnt;
+     26          	kb_buf[3] = kb_buf[2];
+   \   00000006   9100....           LDS     R16, (??kb_buf + 2)
+   \   0000000A   9300....           STS     (??kb_buf + 3), R16
+     27          	kb_buf[2] = kb_buf[1];
+   \   0000000E   9100....           LDS     R16, (??kb_buf + 1)
+   \   00000012   9300....           STS     (??kb_buf + 2), R16
+     28          	kb_buf[1] = kb_buf[0];
+   \   00000016   9100....           LDS     R16, ??kb_buf
+   \   0000001A   9300....           STS     (??kb_buf + 1), R16
+     29              kb_buf[0] = ~KB_IN;
+   \   0000001E   B101               IN      R16, 0x01
+   \   00000020   9500               COM     R16
+   \   00000022   9300....           STS     ??kb_buf, R16
+     30              key_down = 0xFF;
+   \   00000026   EF2F               LDI     R18, 255
+     31          	key_up = 0;
+   \   00000028   E0A0               LDI     R26, 0
+     32          	cnt = 3;
+   \   0000002A   E003               LDI     R16, 3
+     33          	kbp = kb_buf;
+   \   0000002C   ....               LDI     R30, LOW(??kb_buf)
+   \   0000002E   ....               LDI     R31, (??kb_buf) >> 8
+     34          	do {
+     35          		key_down &= *kbp;
+   \                     ??kbService_0:
+   \   00000030   8110               LD      R17, Z
+   \   00000032   2321               AND     R18, R17
+     36          		key_up |= *(kbp++);
+   \   00000034   8110               LD      R17, Z
+   \   00000036   2BA1               OR      R26, R17
+   \   00000038   9631               ADIW    R31:R30, 1
+     37          	} while(--cnt);
+   \   0000003A   950A               DEC     R16
+   \   0000003C   2300               TST     R16
+   \   0000003E   F7C1               BRNE    ??kbService_0
+     38          	key_down &= ~*kbp;
+   \   00000040   8100               LD      R16, Z
+   \   00000042   9500               COM     R16
+   \   00000044   2320               AND     R18, R16
+     39          	key_up |= ~*kbp;
+   \   00000046   8100               LD      R16, Z
+   \   00000048   9500               COM     R16
+   \   0000004A   2BA0               OR      R26, R16
+     40          	if(key_down)
+   \   0000004C   2322               TST     R18
+   \   0000004E   F019               BREQ    ??kbService_1
+     41          		kbAddKey(q, key_down, MSG(KEY_DOWN,0));
+   \   00000050   E130               LDI     R19, 16
+   \   00000052   018C               MOVW    R17:R16, R25:R24
+   \   00000054   ....               RCALL   kbAddKey
+     42          	key_up = ~key_up;
+   \                     ??kbService_1:
+   \   00000056   95A0               COM     R26
+     43          	if(key_up)
+   \   00000058   23AA               TST     R26
+   \   0000005A   F021               BREQ    ??kbService_2
+     44          		kbAddKey(q, key_up, MSG(KEY_UP,0));
+   \   0000005C   E230               LDI     R19, 32
+   \   0000005E   2F2A               MOV     R18, R26
+   \   00000060   018C               MOVW    R17:R16, R25:R24
+   \   00000062   ....               RCALL   kbAddKey
+     45          }
+   \                     ??kbService_2:
+   \   00000064   E0E3               LDI     R30, 3
+   \   00000066   ........           JMP     ?EPILOGUE_B3_L09
+   \   0000006A                      REQUIRE _A_PINE
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+   \                     ??kb_buf:
+   \   00000000                      DS8 4
+     46          
+
+   Maximum stack usage in bytes:
+
+   CSTACK RSTACK Function
+   ------ ------ --------
+      4      2   kbAddKey
+        4      2   -> qAdd
+      3      2   kbService
+        3      2   -> kbAddKey
+
+
+   Segment part sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       1  _A_PINE
+      36  kbAddKey
+     106  kbService
+       4  kb_buf
+       7  -- Other
+
+ 
+   1 byte  in segment ABSOLUTE
+ 142 bytes in segment CODE
+   7 bytes in segment INITTAB
+   4 bytes in segment NEAR_Z
+ 
+ 142 bytes of CODE memory (+ 7 bytes shared)
+   4 bytes of DATA memory (+ 1 byte  shared)
+
+Errors: none
+Warnings: none

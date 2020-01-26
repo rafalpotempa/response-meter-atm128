@@ -1,0 +1,699 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V6.80.5.1069 for Atmel AVR           09/Dec/2019  10:21:28
+# Copyright 1996-2016 IAR Systems AB.
+# Standalone license - IAR Embedded Workbench for Atmel AVR
+#
+#    Source file  =  D:\lab_15\lab_10_lcd_printf\lab_10_lcd_printf.c
+#    Command line =  
+#        D:\lab_15\lab_10_lcd_printf\lab_10_lcd_printf.c --cpu=m128 -ms -o
+#        D:\lab_15\lab_10_lcd_printf\Debug\Obj -lC
+#        D:\lab_15\lab_10_lcd_printf\Debug\List -y --initializers_in_flash
+#        --no_cse --no_inline --no_code_motion --no_cross_call --no_clustering
+#        --no_tbaa --debug -DENABLE_BIT_DEFINITIONS -e -I ..\lib\ --eeprom_size
+#        4096 --clib -Ol
+#    Locale       =  Polish_Poland.1250
+#    List file    =  
+#        D:\lab_15\lab_10_lcd_printf\Debug\List\lab_10_lcd_printf.lst
+#    Object file  =  
+#        D:\lab_15\lab_10_lcd_printf\Debug\Obj\lab_10_lcd_printf.r90
+#
+###############################################################################
+
+D:\lab_15\lab_10_lcd_printf\lab_10_lcd_printf.c
+      1          #include <ioavr.h>
+
+   \                                 In  segment ABSOLUTE, at 0x43
+   \   union <unnamed> volatile __io _A_OCR2
+   \                     _A_OCR2:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x45
+   \   union <unnamed> volatile __io _A_TCCR2
+   \                     _A_TCCR2:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x51
+   \   union <unnamed> volatile __io _A_OCR0
+   \                     _A_OCR0:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x52
+   \   union <unnamed> volatile __io _A_TCNT0
+   \                     _A_TCNT0:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x53
+   \   union <unnamed> volatile __io _A_TCCR0
+   \                     _A_TCCR0:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x57
+   \   union <unnamed> volatile __io _A_TIMSK
+   \                     _A_TIMSK:
+   \   00000000                      DS8 1
+      2          #include <inavr.h>
+      3          #include <stdio.h>
+      4          #include <pgmspace.h>
+      5          #include "rtc_simple.h"
+      6          #include "hd44780.h"
+      7          #include "queue.h"
+      8          #include "keyb_drv.h"
+      9          
+     10          #define CLOCK_DEC	0x03
+     11          
+     12          #define byte unsigned char
+     13          
+     14          typedef union TSysRq {
+     15              byte msg;
+     16              struct {
+     17          		byte rq_data	: 4;
+     18          		byte rq_id 	: 4;
+     19              };
+     20          } TSysRq;
+     21          
+     22          //---------------------------------------------------------
+     23          // Constants declaration
+     24          //---------------------------------------------------------
+     25          
+
+   \                                 In  segment NEAR_F, align 1, keep-with-next
+     26          static const char __flash LCDUserChar[] = {
+   \                     LCDUserChar:
+   \   00000000   001F00000000       DC8 31, 0, 0, 0, 0, 0, 0, 31, 31, 0, 16, 16, 16, 16, 0, 31, 31, 0, 24
+   \              1F00001F1010
+   \              10101F00001F
+   \              18          
+   \   00000013   181800181F1F       DC8 24, 24, 24, 0, 31, 31, 0, 28, 28, 28, 28, 0, 31, 31, 0, 30, 30, 30
+   \              1C001C1C001C
+   \              1F1F1E001E1E
+   \   00000025   001E1F1F1F00       DC8 30, 0, 31, 31, 0, 31, 31, 31, 31, 0, 31, 3, 2, 2, 2, 2, 2, 2, 3, 24
+   \              1F1F001F031F
+   \              020202020202
+   \              1803        
+   \   00000039   080808080808       DC8 8, 8, 8, 8, 8, 8, 24
+   \              18          
+     27              0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F,
+     28              0x1F, 0x00, 0x10, 0x10, 0x10, 0x10, 0x00, 0x1F,
+     29              0x1F, 0x00, 0x18, 0x18, 0x18, 0x18, 0x00, 0x1F,
+     30              0x1F, 0x00, 0x1C, 0x1C, 0x1C, 0x1C, 0x00, 0x1F,
+     31              0x1F, 0x00, 0x1E, 0x1E, 0x1E, 0x1E, 0x00, 0x1F,
+     32              0x1F, 0x00, 0x1F, 0x1F, 0x1F, 0x1F, 0x00, 0x1F,
+     33              0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03,
+     34              0x18, 0x08, 0x08, 0x08, 0x08, 0x08, 0x08, 0x18 };
+     35           
+
+   \                                 In  segment NEAR_F, align 1, keep-with-next
+     36          static const char __flash clockMask[] = "%1d:%02d:%02d";
+   \                     clockMask:
+   \   00000000   31253A643025       DC8 "%1d:%02d:%02d"
+   \              6432253A3230
+   \              0064        
+     37          
+     38          //---------------------------------------------------------
+     39          // Global variables declaration
+     40          //---------------------------------------------------------
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     41          TClock playerOne;
+   \                     playerOne:
+   \   00000000                      DS8 4
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     42          TClock playerTwo;
+   \                     playerTwo:
+   \   00000000                      DS8 4
+     43          
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     44          byte player = 0;
+   \                     player:
+   \   00000000                      DS8 1
+     45          
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     46          TQueue event_queue;
+   \                     event_queue:
+   \   00000000                      DS8 6
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     47          byte ev_q_buf[16];
+   \                     ev_q_buf:
+   \   00000000                      DS8 16
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     48          char tmp_buf[4];
+   \                     tmp_buf:
+   \   00000000                      DS8 4
+
+   \                                 In  segment NEAR_Z, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_Z>`
+     49          TSysRq rq;
+   \                     rq:
+   \   00000000                      DS8 1
+     50          
+     51          // Clock values
+     52           
+     53          
+     54          //This function is used by printf function to transfer data to STDIO device
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     55          int putchar(int ch)
+   \                     putchar:
+     56          {
+   \   00000000   939A               ST      -Y, R25
+   \   00000002   938A               ST      -Y, R24
+   \   00000004   01C8               MOVW    R25:R24, R17:R16
+     57          	LCDPutChar(ch);
+   \   00000006   2F08               MOV     R16, R24
+   \   00000008   ........           CALL    LCDPutChar
+     58          	return ch;
+   \   0000000C   018C               MOVW    R17:R16, R25:R24
+   \   0000000E   9189               LD      R24, Y+
+   \   00000010   9199               LD      R25, Y+
+   \   00000012   9508               RET
+     59          }
+     60          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     61          void onKeyDown()
+   \                     onKeyDown:
+     62          {
+     63            if (player == 0){
+   \   00000000   9100....           LDS     R16, player
+   \   00000004   2300               TST     R16
+   \   00000006   F481               BRNE    ??onKeyDown_0
+     64                  LCDGoTo(LINE_0 + 12);
+   \   00000008   E00C               LDI     R16, 12
+   \   0000000A   ........           CALL    LCDGoTo
+     65                  LCDPutChar(' ');
+   \   0000000E   E200               LDI     R16, 32
+   \   00000010   ........           CALL    LCDPutChar
+     66              	LCDGoTo(LINE_1 + 3);
+   \   00000014   E403               LDI     R16, 67
+   \   00000016   ........           CALL    LCDGoTo
+     67          	LCDPutChar('o');
+   \   0000001A   E60F               LDI     R16, 111
+   \   0000001C   ........           CALL    LCDPutChar
+     68                  player = 1;
+   \   00000020   E001               LDI     R16, 1
+   \   00000022   9300....           STS     player, R16
+   \   00000026   9508               RET
+     69            } else if (player == 1) {
+   \                     ??onKeyDown_0:
+   \   00000028   9100....           LDS     R16, player
+   \   0000002C   3001               CPI     R16, 1
+   \   0000002E   F479               BRNE    ??onKeyDown_1
+     70                  LCDGoTo(LINE_0 + 12);
+   \   00000030   E00C               LDI     R16, 12
+   \   00000032   ........           CALL    LCDGoTo
+     71                  LCDPutChar('o');
+   \   00000036   E60F               LDI     R16, 111
+   \   00000038   ........           CALL    LCDPutChar
+     72              	LCDGoTo(LINE_1 + 3);
+   \   0000003C   E403               LDI     R16, 67
+   \   0000003E   ........           CALL    LCDGoTo
+     73          	LCDPutChar(' ');
+   \   00000042   E200               LDI     R16, 32
+   \   00000044   ........           CALL    LCDPutChar
+     74                  player = 0;
+   \   00000048   E000               LDI     R16, 0
+   \   0000004A   9300....           STS     player, R16
+     75            }
+     76          }
+   \                     ??onKeyDown_1:
+   \   0000004E   9508               RET
+     77          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     78          void onKeyUp()
+   \                     onKeyUp:
+     79          {
+     80          
+     81          }
+   \   00000000   9508               RET
+     82          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     83          void onClockDec()
+   \                     onClockDec:
+     84          {
+     85          	LCDGoTo(LINE_0);
+   \   00000000   E000               LDI     R16, 0
+   \   00000002   ........           CALL    LCDGoTo
+     86          	printf_P(
+     87          		clockMask,
+     88          		playerOne.hr,
+     89          		playerOne.min,
+     90          		playerOne.sec);
+   \   00000006   9100....           LDS     R16, playerOne
+   \   0000000A   E010               LDI     R17, 0
+   \   0000000C   931A               ST      -Y, R17
+   \   0000000E   930A               ST      -Y, R16
+   \   00000010   9100....           LDS     R16, (playerOne + 1)
+   \   00000014   E010               LDI     R17, 0
+   \   00000016   931A               ST      -Y, R17
+   \   00000018   930A               ST      -Y, R16
+   \   0000001A   9100....           LDS     R16, (playerOne + 2)
+   \   0000001E   E010               LDI     R17, 0
+   \   00000020   931A               ST      -Y, R17
+   \   00000022   930A               ST      -Y, R16
+   \   00000024   ....               LDI     R16, LOW(clockMask)
+   \   00000026   ....               LDI     R17, (clockMask) >> 8
+   \   00000028   E020               LDI     R18, 0
+   \   0000002A   ........           CALL    printf_P
+   \   0000002E   9626               ADIW    R29:R28, 6
+     91                  
+     92          	LCDGoTo(LINE_1+9);
+   \   00000030   E409               LDI     R16, 73
+   \   00000032   ........           CALL    LCDGoTo
+     93          	printf_P(
+     94          		clockMask,
+     95          		playerTwo.hr,
+     96          		playerTwo.min,
+     97          		playerTwo.sec);
+   \   00000036   9100....           LDS     R16, playerTwo
+   \   0000003A   E010               LDI     R17, 0
+   \   0000003C   931A               ST      -Y, R17
+   \   0000003E   930A               ST      -Y, R16
+   \   00000040   9100....           LDS     R16, (playerTwo + 1)
+   \   00000044   E010               LDI     R17, 0
+   \   00000046   931A               ST      -Y, R17
+   \   00000048   930A               ST      -Y, R16
+   \   0000004A   9100....           LDS     R16, (playerTwo + 2)
+   \   0000004E   E010               LDI     R17, 0
+   \   00000050   931A               ST      -Y, R17
+   \   00000052   930A               ST      -Y, R16
+   \   00000054   ....               LDI     R16, LOW(clockMask)
+   \   00000056   ....               LDI     R17, (clockMask) >> 8
+   \   00000058   E020               LDI     R18, 0
+   \   0000005A   ........           CALL    printf_P
+   \   0000005E   9626               ADIW    R29:R28, 6
+     98          }
+   \   00000060   9508               RET
+     99          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    100          static void InitDevices()
+   \                     InitDevices:
+    101          {
+    102              LCDInit();
+   \   00000000   ........           CALL    LCDInit
+    103              LCDLoadUserCharP(LCDUserChar, 0, sizeof(LCDUserChar));
+   \   00000004   E430               LDI     R19, 64
+   \   00000006   E020               LDI     R18, 0
+   \   00000008   ....               LDI     R16, LOW(LCDUserChar)
+   \   0000000A   ....               LDI     R17, (LCDUserChar) >> 8
+   \   0000000C   ........           CALL    LCDLoadUserCharP
+    104              LCDClear();
+   \   00000010   ........           CALL    LCDClear
+    105              //T0 start
+    106              TCNT0 = 0;
+   \   00000014   E000               LDI     R16, 0
+   \   00000016   BF02               OUT     0x32, R16
+    107          //    OCR0 = 71;
+    108          //    OCR2 = 71;
+    109              OCR0 = 1;
+   \   00000018   E001               LDI     R16, 1
+   \   0000001A   BF01               OUT     0x31, R16
+    110              OCR2 = 1;
+   \   0000001C   E001               LDI     R16, 1
+   \   0000001E   BD03               OUT     0x23, R16
+    111              TCCR0 = (1 << WGM01) | (1 << CS02) | (1 << CS01) | (1 << CS00);
+   \   00000020   E00F               LDI     R16, 15
+   \   00000022   BF03               OUT     0x33, R16
+    112              //dvt = 50;
+    113              //Timers interrupt mask
+    114              TIMSK = (1 << OCIE0) | (1 << OCIE2);
+   \   00000024   E802               LDI     R16, 130
+   \   00000026   BF07               OUT     0x37, R16
+    115              __enable_interrupt();	
+   \   00000028   9478               SEI
+    116          }
+   \   0000002A   9508               RET
+   \   0000002C                      REQUIRE _A_TCNT0
+   \   0000002C                      REQUIRE _A_OCR0
+   \   0000002C                      REQUIRE _A_OCR2
+   \   0000002C                      REQUIRE _A_TCCR0
+   \   0000002C                      REQUIRE _A_TIMSK
+    117          
+    118          #pragma vector = TIMER0_COMP_vect
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    119          __interrupt void ISR_OCR0()
+   \                     ISR_OCR0:
+    120          {
+   \   00000000   939A               ST      -Y, R25
+   \   00000002   938A               ST      -Y, R24
+   \   00000004   93FA               ST      -Y, R31
+   \   00000006   93EA               ST      -Y, R30
+   \   00000008   923A               ST      -Y, R3
+   \   0000000A   922A               ST      -Y, R2
+   \   0000000C   921A               ST      -Y, R1
+   \   0000000E   920A               ST      -Y, R0
+   \   00000010   937A               ST      -Y, R23
+   \   00000012   936A               ST      -Y, R22
+   \   00000014   935A               ST      -Y, R21
+   \   00000016   934A               ST      -Y, R20
+   \   00000018   933A               ST      -Y, R19
+   \   0000001A   932A               ST      -Y, R18
+   \   0000001C   931A               ST      -Y, R17
+   \   0000001E   930A               ST      -Y, R16
+   \   00000020   B78F               IN      R24, 0x3F
+   \   00000022   B79B               IN      R25, 0x3B
+    121          static byte pre_dv = 100;
+    122          	kbService(&event_queue);
+   \   00000024   ....               LDI     R16, LOW(event_queue)
+   \   00000026   ....               LDI     R17, (event_queue) >> 8
+   \   00000028   ........           CALL    kbService
+    123          	if(--pre_dv) return;
+   \   0000002C   9100....           LDS     R16, ??pre_dv
+   \   00000030   950A               DEC     R16
+   \   00000032   9300....           STS     ??pre_dv, R16
+   \   00000036   9100....           LDS     R16, ??pre_dv
+   \   0000003A   2300               TST     R16
+   \   0000003C   F461               BRNE    ??ISR_OCR0_0
+    124          	pre_dv = 100;
+   \   0000003E   E604               LDI     R16, 100
+   \   00000040   9300....           STS     ??pre_dv, R16
+    125          	rtcDec(&playerOne);	
+   \   00000044   ....               LDI     R16, LOW(playerOne)
+   \   00000046   ....               LDI     R17, (playerOne) >> 8
+   \   00000048   ........           CALL    rtcDec
+    126          	qAdd(&event_queue, MSG(CLOCK_DEC, 0));
+   \   0000004C   E320               LDI     R18, 48
+   \   0000004E   ....               LDI     R16, LOW(event_queue)
+   \   00000050   ....               LDI     R17, (event_queue) >> 8
+   \   00000052   ........           CALL    qAdd
+    127          }
+   \                     ??ISR_OCR0_0:
+   \   00000056   BF9B               OUT     0x3B, R25
+   \   00000058   BF8F               OUT     0x3F, R24
+   \   0000005A   9109               LD      R16, Y+
+   \   0000005C   9119               LD      R17, Y+
+   \   0000005E   9129               LD      R18, Y+
+   \   00000060   9139               LD      R19, Y+
+   \   00000062   9149               LD      R20, Y+
+   \   00000064   9159               LD      R21, Y+
+   \   00000066   9169               LD      R22, Y+
+   \   00000068   9179               LD      R23, Y+
+   \   0000006A   9009               LD      R0, Y+
+   \   0000006C   9019               LD      R1, Y+
+   \   0000006E   9029               LD      R2, Y+
+   \   00000070   9039               LD      R3, Y+
+   \   00000072   91E9               LD      R30, Y+
+   \   00000074   91F9               LD      R31, Y+
+   \   00000076   9189               LD      R24, Y+
+   \   00000078   9199               LD      R25, Y+
+   \   0000007A   9518               RETI
+
+   \                                 In  segment NEAR_I, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_I>`
+   \                     ??pre_dv:
+   \   00000000                      DS8 1
+   \   00000001                      REQUIRE `?<Initializer for pre_dv>`
+    128          
+    129          #pragma vector = TIMER2_COMP_vect
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    130          __interrupt void ISR_OCR2()
+   \                     ISR_OCR2:
+    131          {
+   \   00000000   939A               ST      -Y, R25
+   \   00000002   938A               ST      -Y, R24
+   \   00000004   93FA               ST      -Y, R31
+   \   00000006   93EA               ST      -Y, R30
+   \   00000008   923A               ST      -Y, R3
+   \   0000000A   922A               ST      -Y, R2
+   \   0000000C   921A               ST      -Y, R1
+   \   0000000E   920A               ST      -Y, R0
+   \   00000010   937A               ST      -Y, R23
+   \   00000012   936A               ST      -Y, R22
+   \   00000014   935A               ST      -Y, R21
+   \   00000016   934A               ST      -Y, R20
+   \   00000018   933A               ST      -Y, R19
+   \   0000001A   932A               ST      -Y, R18
+   \   0000001C   931A               ST      -Y, R17
+   \   0000001E   930A               ST      -Y, R16
+   \   00000020   B78F               IN      R24, 0x3F
+   \   00000022   B79B               IN      R25, 0x3B
+    132          static byte pre_dv = 100;
+    133          	kbService(&event_queue);
+   \   00000024   ....               LDI     R16, LOW(event_queue)
+   \   00000026   ....               LDI     R17, (event_queue) >> 8
+   \   00000028   ........           CALL    kbService
+    134          	if(--pre_dv) return;
+   \   0000002C   9100....           LDS     R16, ??pre_dv_1
+   \   00000030   950A               DEC     R16
+   \   00000032   9300....           STS     ??pre_dv_1, R16
+   \   00000036   9100....           LDS     R16, ??pre_dv_1
+   \   0000003A   2300               TST     R16
+   \   0000003C   F461               BRNE    ??ISR_OCR2_0
+    135          	pre_dv = 100;
+   \   0000003E   E604               LDI     R16, 100
+   \   00000040   9300....           STS     ??pre_dv_1, R16
+    136          	rtcDec(&playerTwo);	
+   \   00000044   ....               LDI     R16, LOW(playerTwo)
+   \   00000046   ....               LDI     R17, (playerTwo) >> 8
+   \   00000048   ........           CALL    rtcDec
+    137          	qAdd(&event_queue, MSG(CLOCK_DEC, 0));
+   \   0000004C   E320               LDI     R18, 48
+   \   0000004E   ....               LDI     R16, LOW(event_queue)
+   \   00000050   ....               LDI     R17, (event_queue) >> 8
+   \   00000052   ........           CALL    qAdd
+    138          }
+   \                     ??ISR_OCR2_0:
+   \   00000056   BF9B               OUT     0x3B, R25
+   \   00000058   BF8F               OUT     0x3F, R24
+   \   0000005A   9109               LD      R16, Y+
+   \   0000005C   9119               LD      R17, Y+
+   \   0000005E   9129               LD      R18, Y+
+   \   00000060   9139               LD      R19, Y+
+   \   00000062   9149               LD      R20, Y+
+   \   00000064   9159               LD      R21, Y+
+   \   00000066   9169               LD      R22, Y+
+   \   00000068   9179               LD      R23, Y+
+   \   0000006A   9009               LD      R0, Y+
+   \   0000006C   9019               LD      R1, Y+
+   \   0000006E   9029               LD      R2, Y+
+   \   00000070   9039               LD      R3, Y+
+   \   00000072   91E9               LD      R30, Y+
+   \   00000074   91F9               LD      R31, Y+
+   \   00000076   9189               LD      R24, Y+
+   \   00000078   9199               LD      R25, Y+
+   \   0000007A   9518               RETI
+
+   \                                 In  segment NEAR_I, align 1, keep-with-next
+   \   00000000                      REQUIRE `?<Segment init: NEAR_I>`
+   \                     ??pre_dv_1:
+   \   00000000                      DS8 1
+   \   00000001                      REQUIRE `?<Initializer for pre_dv>_1`
+    139          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    140          void main()
+   \                     main:
+    141          {	
+    142                  playerOne.hr = 1;
+   \   00000000   E001               LDI     R16, 1
+   \   00000002   9300....           STS     (playerOne + 2), R16
+    143                  playerTwo.hr = 1;
+   \   00000006   E001               LDI     R16, 1
+   \   00000008   9300....           STS     (playerTwo + 2), R16
+    144            
+    145          	InitDevices();
+   \   0000000C   ....               RCALL   InitDevices
+    146          	qInit(&event_queue, ev_q_buf, sizeof(ev_q_buf));
+   \   0000000E   E140               LDI     R20, 16
+   \   00000010   ....               LDI     R18, LOW(ev_q_buf)
+   \   00000012   ....               LDI     R19, (ev_q_buf) >> 8
+   \   00000014   ....               LDI     R16, LOW(event_queue)
+   \   00000016   ....               LDI     R17, (event_queue) >> 8
+   \   00000018   ........           CALL    qInit
+    147          	qAdd(&event_queue, MSG(CLOCK_DEC, 0));
+   \   0000001C   E320               LDI     R18, 48
+   \   0000001E   ....               LDI     R16, LOW(event_queue)
+   \   00000020   ....               LDI     R17, (event_queue) >> 8
+   \   00000022   ........           CALL    qAdd
+    148                  
+    149                  onKeyDown();
+   \   00000026   ....               RCALL   onKeyDown
+   \   00000028   C008               RJMP    ??main_0
+    150                  
+    151          	while(1)
+    152          	{
+    153          		while(!qGet(&event_queue, &rq.msg));
+    154          		switch(rq.rq_id) {
+    155          		case KEY_DOWN:
+    156          			onKeyDown();
+    157                                  if (player == 0){
+    158                                          TCCR0 = (1 << WGM01) | (0 << CS02) | (0 << CS01) | (0 << CS00);
+    159                                          TCCR2 = (1 << WGM21) | (1 << CS22) | (0 << CS21) | (1 << CS20);
+    160                                  }
+    161                                  else if (player == 1){
+   \                     ??main_1:
+   \   0000002A   9100....           LDS     R16, player
+   \   0000002E   3001               CPI     R16, 1
+   \   00000030   F421               BRNE    ??main_0
+    162                                          TCCR0 = (1 << WGM01) | (1 << CS02) | (1 << CS01) | (1 << CS00);
+   \   00000032   E00F               LDI     R16, 15
+   \   00000034   BF03               OUT     0x33, R16
+    163                                          TCCR2 = (1 << WGM21) | (0 << CS22) | (0 << CS21) | (0 << CS20);
+   \   00000036   E008               LDI     R16, 8
+   \   00000038   BD05               OUT     0x25, R16
+    164                                  }
+    165          			break;
+   \                     ??main_0:
+   \   0000003A   ....               LDI     R18, LOW(rq)
+   \   0000003C   ....               LDI     R19, (rq) >> 8
+   \   0000003E   ....               LDI     R16, LOW(event_queue)
+   \   00000040   ....               LDI     R17, (event_queue) >> 8
+   \   00000042   ........           CALL    qGet
+   \   00000046   2300               TST     R16
+   \   00000048   F3C1               BREQ    ??main_0
+   \   0000004A   9100....           LDS     R16, rq
+   \   0000004E   9502               SWAP    R16
+   \   00000050   700F               ANDI    R16, 0x0F
+   \   00000052   5001               SUBI    R16, 1
+   \   00000054   F029               BREQ    ??main_2
+   \   00000056   950A               DEC     R16
+   \   00000058   F069               BREQ    ??main_3
+   \   0000005A   950A               DEC     R16
+   \   0000005C   F069               BREQ    ??main_4
+   \   0000005E   CFED               RJMP    ??main_0
+   \                     ??main_2:
+   \   00000060   ....               RCALL   onKeyDown
+   \   00000062   9100....           LDS     R16, player
+   \   00000066   2300               TST     R16
+   \   00000068   F701               BRNE    ??main_1
+   \   0000006A   E008               LDI     R16, 8
+   \   0000006C   BF03               OUT     0x33, R16
+   \   0000006E   E00D               LDI     R16, 13
+   \   00000070   BD05               OUT     0x25, R16
+   \   00000072   CFE3               RJMP    ??main_0
+    166          		case KEY_UP:
+    167          			onKeyUp();
+   \                     ??main_3:
+   \   00000074   ....               RCALL   onKeyUp
+    168          			break;
+   \   00000076   CFE1               RJMP    ??main_0
+    169          		case CLOCK_DEC:
+    170          			onClockDec();
+   \                     ??main_4:
+   \   00000078   ....               RCALL   onClockDec
+    171          			break;
+   \   0000007A   CFDF               RJMP    ??main_0
+   \   0000007C                      REQUIRE _A_TCCR0
+   \   0000007C                      REQUIRE _A_TCCR2
+    172          		}
+    173          	}
+    174          }
+
+   \                                 In  segment INTVEC, offset 0x24, root
+   \                     `??ISR_OCR2::??INTVEC 36`:
+   \   00000024   ........           JMP     ISR_OCR2
+
+   \                                 In  segment INTVEC, offset 0x3c, root
+   \                     `??ISR_OCR0::??INTVEC 60`:
+   \   0000003C   ........           JMP     ISR_OCR0
+
+   \                                 In  segment NEAR_ID, align 1, keep-with-next
+   \                     `?<Initializer for pre_dv>`:
+   \   00000000   64                 DC8 100
+
+   \                                 In  segment NEAR_ID, align 1, keep-with-next
+   \                     `?<Initializer for pre_dv>_1`:
+   \   00000000   64                 DC8 100
+    175          
+
+   Maximum stack usage in bytes:
+
+   CSTACK RSTACK Function
+   ------ ------ --------
+     16      2   ISR_OCR0
+       16      2   -> kbService
+       16      2   -> qAdd
+       16      2   -> rtcDec
+     16      2   ISR_OCR2
+       16      2   -> kbService
+       16      2   -> qAdd
+       16      2   -> rtcDec
+      0      2   InitDevices
+        0      2   -> LCDClear
+        0      2   -> LCDInit
+        0      2   -> LCDLoadUserCharP
+      0      2   main
+        0      2   -> InitDevices
+        0      2   -> onClockDec
+        0      2   -> onKeyDown
+        0      2   -> onKeyUp
+        0      2   -> qAdd
+        0      2   -> qGet
+        0      2   -> qInit
+      6      2   onClockDec
+        0      2   -> LCDGoTo
+        6      2   -> printf_P
+      0      2   onKeyDown
+        0      2   -> LCDGoTo
+        0      2   -> LCDPutChar
+      0      2   onKeyUp
+      2      2   putchar
+        2      2   -> LCDPutChar
+
+
+   Segment part sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       1  ?<Initializer for pre_dv>
+       1  ?<Initializer for pre_dv>_1
+     124  ISR_OCR0
+       4  ISR_OCR0::??INTVEC 60
+     124  ISR_OCR2
+       4  ISR_OCR2::??INTVEC 36
+      44  InitDevices
+      64  LCDUserChar
+       1  _A_OCR0
+       1  _A_OCR2
+       1  _A_TCCR0
+       1  _A_TCCR2
+       1  _A_TCNT0
+       1  _A_TIMSK
+      14  clockMask
+      16  ev_q_buf
+       6  event_queue
+     124  main
+      98  onClockDec
+      80  onKeyDown
+       2  onKeyUp
+       1  player
+       4  playerOne
+       4  playerTwo
+       1  pre_dv
+       1  pre_dv
+      20  putchar
+       1  rq
+       4  tmp_buf
+      14  -- Other
+
+ 
+   6 bytes in segment ABSOLUTE
+ 616 bytes in segment CODE
+  14 bytes in segment INITTAB
+   8 bytes in segment INTVEC
+  78 bytes in segment NEAR_F
+   2 bytes in segment NEAR_I
+   2 bytes in segment NEAR_ID
+  36 bytes in segment NEAR_Z
+ 
+ 696 bytes of CODE memory (+ 22 bytes shared)
+  38 bytes of DATA memory (+  6 bytes shared)
+
+Errors: none
+Warnings: none

@@ -1,0 +1,612 @@
+###############################################################################
+#
+# IAR C/C++ Compiler V6.80.5.1069 for Atmel AVR           09/Dec/2019  08:35:46
+# Copyright 1996-2016 IAR Systems AB.
+# Standalone license - IAR Embedded Workbench for Atmel AVR
+#
+#    Source file  =  D:\lab_15\lib\hd44780.c
+#    Command line =  
+#        D:\lab_15\lib\hd44780.c --cpu=m128 -ms -o
+#        D:\lab_15\lab_10_lcd_printf\Debug\Obj -lC
+#        D:\lab_15\lab_10_lcd_printf\Debug\List -y --initializers_in_flash
+#        --no_cse --no_inline --no_code_motion --no_cross_call --no_clustering
+#        --no_tbaa --debug -DENABLE_BIT_DEFINITIONS -e -I ..\lib\ --eeprom_size
+#        4096 --clib -Ol
+#    Locale       =  Polish_Poland.1250
+#    List file    =  D:\lab_15\lab_10_lcd_printf\Debug\List\hd44780.lst
+#    Object file  =  D:\lab_15\lab_10_lcd_printf\Debug\Obj\hd44780.r90
+#
+###############################################################################
+
+D:\lab_15\lib\hd44780.c
+      1          //HD44780 display service routines
+      2          #include "hd44780.h"
+      3          #include <ioavr.h>
+
+   \                                 In  segment ABSOLUTE, at 0x36
+   \   union <unnamed> volatile __io _A_PINB
+   \                     _A_PINB:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x37
+   \   union <unnamed> volatile __io _A_DDRB
+   \                     _A_DDRB:
+   \   00000000                      DS8 1
+
+   \                                 In  segment ABSOLUTE, at 0x38
+   \   union <unnamed> volatile __io _A_PORTB
+   \                     _A_PORTB:
+   \   00000000                      DS8 1
+      4          #include <inavr.h>
+      5          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+      6          void static PulseEN()
+   \                     PulseEN:
+      7          {
+      8              LCD |= EN;
+   \   00000000   9AC1               SBI     0x18, 0x01
+      9              __delay_cycles(4);
+   \   00000002   C000               RJMP    $+2
+   \   00000004   C000               RJMP    $+2
+     10              LCD &= ~EN;
+   \   00000006   98C1               CBI     0x18, 0x01
+     11          }
+   \   00000008   9508               RET
+   \   0000000A                      REQUIRE _A_PORTB
+     12          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     13          void LCDWriteCtrl(unsigned char d)
+   \                     LCDWriteCtrl:
+     14          {
+   \   00000000   2F10               MOV     R17, R16
+     15              LCD = d & 0xF0;
+   \   00000002   2F01               MOV     R16, R17
+   \   00000004   7F00               ANDI    R16, 0xF0
+   \   00000006   BB08               OUT     0x18, R16
+     16              PulseEN();
+   \   00000008   ....               RCALL   PulseEN
+     17              LCD = (d << 4) & 0xF0;
+   \   0000000A   9512               SWAP    R17
+   \   0000000C   7F10               ANDI    R17, 0xF0
+   \   0000000E   BB18               OUT     0x18, R17
+     18              PulseEN();
+   \   00000010   ....               RCALL   PulseEN
+     19          }
+   \   00000012   9508               RET
+   \   00000014                      REQUIRE _A_PORTB
+     20          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     21          void LCDWriteData(unsigned char d)
+   \                     LCDWriteData:
+     22          {
+   \   00000000   2F10               MOV     R17, R16
+     23              LCD = d & 0xF0 | RS;
+   \   00000002   2F01               MOV     R16, R17
+   \   00000004   7F00               ANDI    R16, 0xF0
+   \   00000006   6008               ORI     R16, 0x08
+   \   00000008   BB08               OUT     0x18, R16
+     24              PulseEN();
+   \   0000000A   ....               RCALL   PulseEN
+     25              LCD = (d << 4) & 0xF0 | RS;
+   \   0000000C   9512               SWAP    R17
+   \   0000000E   7F10               ANDI    R17, 0xF0
+   \   00000010   6018               ORI     R17, 0x08
+   \   00000012   BB18               OUT     0x18, R17
+     26              PulseEN();
+   \   00000014   ....               RCALL   PulseEN
+     27          }
+   \   00000016   9508               RET
+   \   00000018                      REQUIRE _A_PORTB
+     28          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     29          unsigned char static ReadNibble()
+   \                     ReadNibble:
+     30          {
+     31          unsigned char retVal;
+     32              LCD |= EN;
+   \   00000000   9AC1               SBI     0x18, 0x01
+     33              __delay_cycles(3);
+   \   00000002   C000               RJMP    $+2
+   \   00000004   0000               NOP
+     34              retVal = LCDin;
+   \   00000006   B306               IN      R16, 0x16
+     35              LCD &= ~EN;
+   \   00000008   98C1               CBI     0x18, 0x01
+     36              return retVal;
+   \   0000000A   9508               RET
+   \   0000000C                      REQUIRE _A_PORTB
+   \   0000000C                      REQUIRE _A_PINB
+     37          }
+     38          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     39          unsigned char LCDReadData()
+   \                     LCDReadData:
+     40          {
+     41          unsigned char retVal;
+     42              LCDdir &= LCD_RD_DIR;
+   \   00000000   B307               IN      R16, 0x17
+   \   00000002   700E               ANDI    R16, 0x0E
+   \   00000004   BB07               OUT     0x17, R16
+     43              LCD |= (0xF0 | WE | RS);
+   \   00000006   B308               IN      R16, 0x18
+   \   00000008   6F0C               ORI     R16, 0xFC
+   \   0000000A   BB08               OUT     0x18, R16
+     44              retVal = (ReadNibble() & 0xF0) | (ReadNibble() >> 4);
+   \   0000000C   ....               RCALL   ReadNibble
+   \   0000000E   2F10               MOV     R17, R16
+   \   00000010   7F10               ANDI    R17, 0xF0
+   \   00000012   ....               RCALL   ReadNibble
+   \   00000014   9502               SWAP    R16
+   \   00000016   700F               ANDI    R16, 0x0F
+   \   00000018   2B10               OR      R17, R16
+     45              LCDdir |= LCD_WR_DIR;
+   \   0000001A   E000               LDI     R16, 0
+   \   0000001C   99B8               SBIC    0x17, 0x00
+   \   0000001E   9503               INC     R16
+   \                     ??LCDReadData_0:
+   \   00000020   6F0E               ORI     R16, 0xFE
+   \   00000022   BB07               OUT     0x17, R16
+     46              return retVal;
+   \   00000024   2F01               MOV     R16, R17
+   \   00000026   9508               RET
+   \   00000028                      REQUIRE _A_DDRB
+   \   00000028                      REQUIRE _A_PORTB
+     47          }
+     48          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     49          unsigned char LCDReadCtrl()
+   \                     LCDReadCtrl:
+     50          {
+     51          unsigned char retVal;
+     52              LCDdir &= LCD_RD_DIR;
+   \   00000000   B307               IN      R16, 0x17
+   \   00000002   700E               ANDI    R16, 0x0E
+   \   00000004   BB07               OUT     0x17, R16
+     53              LCD = 0xF0 | WE;
+   \   00000006   EF04               LDI     R16, 244
+   \   00000008   BB08               OUT     0x18, R16
+     54              retVal = (ReadNibble() & 0xF0) | (ReadNibble() >> 4);
+   \   0000000A   ....               RCALL   ReadNibble
+   \   0000000C   2F10               MOV     R17, R16
+   \   0000000E   7F10               ANDI    R17, 0xF0
+   \   00000010   ....               RCALL   ReadNibble
+   \   00000012   9502               SWAP    R16
+   \   00000014   700F               ANDI    R16, 0x0F
+   \   00000016   2B10               OR      R17, R16
+     55              LCDdir |= LCD_WR_DIR;
+   \   00000018   E000               LDI     R16, 0
+   \   0000001A   99B8               SBIC    0x17, 0x00
+   \   0000001C   9503               INC     R16
+   \                     ??LCDReadCtrl_0:
+   \   0000001E   6F0E               ORI     R16, 0xFE
+   \   00000020   BB07               OUT     0x17, R16
+     56              return retVal;
+   \   00000022   2F01               MOV     R16, R17
+   \   00000024   9508               RET
+   \   00000026                      REQUIRE _A_DDRB
+   \   00000026                      REQUIRE _A_PORTB
+     57          }
+     58          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     59          void static WaitOnLCD()
+   \                     WaitOnLCD:
+   \                     ??WaitOnLCD_0:
+     60          {
+     61              while(LCDReadCtrl() & 0x80);
+   \   00000000   ....               RCALL   LCDReadCtrl
+   \   00000002   FB07               BST     R16, 7
+   \   00000004   F3EE               BRTS    ??WaitOnLCD_0
+     62          }
+   \   00000006   9508               RET
+     63          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     64          void LCDInit(void)
+   \                     LCDInit:
+     65          {
+     66              LCDdir = LCD_WR_DIR;
+   \   00000000   EF0E               LDI     R16, 254
+   \   00000002   BB07               OUT     0x17, R16
+     67              //Software clear
+     68              LCD = 0x30;
+   \   00000004   E300               LDI     R16, 48
+   \   00000006   BB08               OUT     0x18, R16
+     69              //Implied settings
+     70              // Pulse + 250us * 20 = 5ms
+     71              PulseEN();
+   \   00000008   ....               RCALL   PulseEN
+     72              __delay_cycles(36900UL);
+   \   0000000A   E008               LDI     R16, 8
+   \   0000000C   E214               LDI     R17, 36
+   \   0000000E   5001               SUBI    R16, 1
+   \   00000010   4010               SBCI    R17, 0
+   \   00000012   F7E9               BRNE    $-4
+   \   00000014   C000               RJMP    $+2
+   \   00000016   0000               NOP
+     73              PulseEN(); // Pulse + 250us	
+   \   00000018   ....               RCALL   PulseEN
+     74              __delay_cycles(18000UL);
+   \   0000001A   E903               LDI     R16, 147
+   \   0000001C   E111               LDI     R17, 17
+   \   0000001E   5001               SUBI    R16, 1
+   \   00000020   4010               SBCI    R17, 0
+   \   00000022   F7E9               BRNE    $-4
+   \   00000024   C000               RJMP    $+2
+   \   00000026   0000               NOP
+     75              PulseEN(); // Pulse + 250us	
+   \   00000028   ....               RCALL   PulseEN
+     76              __delay_cycles(18000UL);
+   \   0000002A   E903               LDI     R16, 147
+   \   0000002C   E111               LDI     R17, 17
+   \   0000002E   5001               SUBI    R16, 1
+   \   00000030   4010               SBCI    R17, 0
+   \   00000032   F7E9               BRNE    $-4
+   \   00000034   C000               RJMP    $+2
+   \   00000036   0000               NOP
+     77              LCD = 0x20;	
+   \   00000038   E200               LDI     R16, 32
+   \   0000003A   BB08               OUT     0x18, R16
+     78              PulseEN();
+   \   0000003C   ....               RCALL   PulseEN
+     79              __delay_cycles(10000);
+   \   0000003E   EC03               LDI     R16, 195
+   \   00000040   E019               LDI     R17, 9
+   \   00000042   5001               SUBI    R16, 1
+   \   00000044   4010               SBCI    R17, 0
+   \   00000046   F7E9               BRNE    $-4
+   \   00000048   C000               RJMP    $+2
+   \   0000004A   0000               NOP
+     80              //Initial settings
+     81              LCDWriteCtrl(0x28); //4-bit in terface, 2 lines display, 7x5 dot matrix
+   \   0000004C   E208               LDI     R16, 40
+   \   0000004E   ....               RCALL   LCDWriteCtrl
+     82              WaitOnLCD();
+   \   00000050   ....               RCALL   WaitOnLCD
+     83              LCDWriteCtrl(0x0C);//Display On, Cursor Off, Blinking Off
+   \   00000052   E00C               LDI     R16, 12
+   \   00000054   ....               RCALL   LCDWriteCtrl
+     84              WaitOnLCD();
+   \   00000056   ....               RCALL   WaitOnLCD
+     85              LCDWriteCtrl(0x01); //Clear display
+   \   00000058   E001               LDI     R16, 1
+   \   0000005A   ....               RCALL   LCDWriteCtrl
+     86              WaitOnLCD();
+   \   0000005C   ....               RCALL   WaitOnLCD
+     87              LCDWriteCtrl(0x06);//Increment without shift
+   \   0000005E   E006               LDI     R16, 6
+   \   00000060   ....               RCALL   LCDWriteCtrl
+     88          }
+   \   00000062   9508               RET
+   \   00000064                      REQUIRE _A_DDRB
+   \   00000064                      REQUIRE _A_PORTB
+     89          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     90          void LCDClear(void)
+   \                     LCDClear:
+     91          {
+     92              WaitOnLCD();
+   \   00000000   ....               RCALL   WaitOnLCD
+     93              LCDWriteCtrl(0x01);
+   \   00000002   E001               LDI     R16, 1
+   \   00000004   ....               RCALL   LCDWriteCtrl
+     94          }
+   \   00000006   9508               RET
+     95          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+     96          void LCDGoTo(unsigned char pos)
+   \                     LCDGoTo:
+     97          {
+   \   00000000   2F20               MOV     R18, R16
+     98              WaitOnLCD();
+   \   00000002   ....               RCALL   WaitOnLCD
+     99          	LCDWriteCtrl(DDRAM_ADDR | pos);
+   \   00000004   6820               ORI     R18, 0x80
+   \   00000006   2F02               MOV     R16, R18
+   \   00000008   ....               RCALL   LCDWriteCtrl
+    100          }
+   \   0000000A   9508               RET
+    101          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    102          void LCDLoadUserCharP(const char __flash *data, unsigned char addr, unsigned char size)
+   \                     LCDLoadUserCharP:
+    103          {
+   \   00000000   01F8               MOVW    R31:R30, R17:R16
+    104          const char __flash *pd;
+    105              pd = data;
+    106              WaitOnLCD();
+   \   00000002   ....               RCALL   WaitOnLCD
+    107              LCDWriteCtrl(CGRAM_ADDR | addr);
+   \   00000004   6420               ORI     R18, 0x40
+   \   00000006   2F02               MOV     R16, R18
+   \   00000008   ....               RCALL   LCDWriteCtrl
+    108              do {
+    109                  WaitOnLCD();
+   \                     ??LCDLoadUserCharP_0:
+   \   0000000A   ....               RCALL   WaitOnLCD
+    110                  LCDWriteData(*(pd++));
+   \   0000000C   9104               LPM     R16, Z
+   \   0000000E   ....               RCALL   LCDWriteData
+   \   00000010   9631               ADIW    R31:R30, 1
+    111              } while(--size);
+   \   00000012   953A               DEC     R19
+   \   00000014   2333               TST     R19
+   \   00000016   F7C9               BRNE    ??LCDLoadUserCharP_0
+    112          }
+   \   00000018   9508               RET
+    113          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    114          void LoadUserChar(char const* data, unsigned char addr)
+   \                     LoadUserChar:
+    115          {
+   \   00000000   01F8               MOVW    R31:R30, R17:R16
+    116          unsigned char cnt;
+    117              WaitOnLCD();
+   \   00000002   ....               RCALL   WaitOnLCD
+    118              LCDWriteCtrl(CGRAM_ADDR | (addr << 3));
+   \   00000004   0F22               LSL     R18
+   \   00000006   0F22               LSL     R18
+   \   00000008   0F22               LSL     R18
+   \   0000000A   6420               ORI     R18, 0x40
+   \   0000000C   2F02               MOV     R16, R18
+   \   0000000E   ....               RCALL   LCDWriteCtrl
+    119              cnt = 8;
+   \   00000010   E028               LDI     R18, 8
+    120              do {
+    121                  WaitOnLCD();
+   \                     ??LoadUserChar_0:
+   \   00000012   ....               RCALL   WaitOnLCD
+    122                  LCDWriteData(*(data++));
+   \   00000014   8100               LD      R16, Z
+   \   00000016   ....               RCALL   LCDWriteData
+   \   00000018   9631               ADIW    R31:R30, 1
+    123              } while(--cnt);
+   \   0000001A   952A               DEC     R18
+   \   0000001C   2322               TST     R18
+   \   0000001E   F7C9               BRNE    ??LoadUserChar_0
+    124          }
+   \   00000020   9508               RET
+    125          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    126          void LCDPutChar(unsigned char c)
+   \                     LCDPutChar:
+    127          {
+   \   00000000   2F20               MOV     R18, R16
+    128              WaitOnLCD();
+   \   00000002   ....               RCALL   WaitOnLCD
+    129          	LCDWriteData(c);
+   \   00000004   2F02               MOV     R16, R18
+   \   00000006   ....               RCALL   LCDWriteData
+    130          }
+   \   00000008   9508               RET
+    131          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    132          void LCDPuts(const char* pc)
+   \                     LCDPuts:
+    133          {
+   \   00000000   01F8               MOVW    R31:R30, R17:R16
+   \   00000002   C003               RJMP    ??LCDPuts_0
+    134          unsigned char c;
+    135          	while(1)	
+    136              {
+    137                  if(!(c = *pc++)) return;
+    138                  WaitOnLCD();
+   \                     ??LCDPuts_1:
+   \   00000004   ....               RCALL   WaitOnLCD
+    139          		LCDWriteData(c);
+   \   00000006   2F02               MOV     R16, R18
+   \   00000008   ....               RCALL   LCDWriteData
+   \                     ??LCDPuts_0:
+   \   0000000A   8120               LD      R18, Z
+   \   0000000C   9631               ADIW    R31:R30, 1
+   \   0000000E   2322               TST     R18
+   \   00000010   F7C9               BRNE    ??LCDPuts_1
+   \   00000012   9508               RET
+    140          	}
+    141          }
+    142          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    143          void LCDPutsCode(char const __flash* pc)
+   \                     LCDPutsCode:
+    144          {
+   \   00000000   01F8               MOVW    R31:R30, R17:R16
+   \   00000002   C003               RJMP    ??LCDPutsCode_0
+    145          unsigned char c;
+    146          	while(1)	
+    147              {
+    148                  if(!(c = *pc++)) return;
+    149                  WaitOnLCD();
+   \                     ??LCDPutsCode_1:
+   \   00000004   ....               RCALL   WaitOnLCD
+    150          		LCDWriteData(c);
+   \   00000006   2F02               MOV     R16, R18
+   \   00000008   ....               RCALL   LCDWriteData
+   \                     ??LCDPutsCode_0:
+   \   0000000A   9124               LPM     R18, Z
+   \   0000000C   9631               ADIW    R31:R30, 1
+   \   0000000E   2322               TST     R18
+   \   00000010   F7C9               BRNE    ??LCDPutsCode_1
+   \   00000012   9508               RET
+    151          	}
+    152          }
+    153          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    154          void LCDPrintDgtBl(unsigned char dgt)
+   \                     LCDPrintDgtBl:
+    155          {
+   \   00000000   2F30               MOV     R19, R16
+    156          unsigned char c;
+    157          	c = dgt / 10;
+   \   00000002   E04A               LDI     R20, 10
+   \   00000004   2F03               MOV     R16, R19
+   \   00000006   ........           CALL    ?UC_DIVMOD_L01
+    158              c = c ? c | 0x30 : ' ';
+   \   0000000A   2300               TST     R16
+   \   0000000C   F011               BREQ    ??LCDPrintDgtBl_0
+   \   0000000E   6300               ORI     R16, 0x30
+   \   00000010   C001               RJMP    ??LCDPrintDgtBl_1
+   \                     ??LCDPrintDgtBl_0:
+   \   00000012   E200               LDI     R16, 32
+    159              LCDPutChar(c);
+   \                     ??LCDPrintDgtBl_1:
+   \   00000014   ....               RCALL   LCDPutChar
+    160          	c = dgt % 10;
+   \   00000016   E04A               LDI     R20, 10
+   \   00000018   2F03               MOV     R16, R19
+   \   0000001A   ........           CALL    ?UC_DIVMOD_L01
+   \   0000001E   2F04               MOV     R16, R20
+    161          	LCDPutChar(0x30 | c);
+   \   00000020   6300               ORI     R16, 0x30
+   \   00000022   ....               RCALL   LCDPutChar
+    162          }
+   \   00000024   9508               RET
+    163          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    164          void LCDPrintDgt(unsigned char dgt)
+   \                     LCDPrintDgt:
+    165          {
+   \   00000000   2F30               MOV     R19, R16
+    166          unsigned char c;
+    167          	c = dgt / 10;
+   \   00000002   E04A               LDI     R20, 10
+   \   00000004   2F03               MOV     R16, R19
+   \   00000006   ........           CALL    ?UC_DIVMOD_L01
+    168          	LCDPutChar(0x30 | c);
+   \   0000000A   6300               ORI     R16, 0x30
+   \   0000000C   ....               RCALL   LCDPutChar
+    169          	c = dgt % 10;
+   \   0000000E   E04A               LDI     R20, 10
+   \   00000010   2F03               MOV     R16, R19
+   \   00000012   ........           CALL    ?UC_DIVMOD_L01
+   \   00000016   2F04               MOV     R16, R20
+    170          	LCDPutChar(0x30 | c);
+   \   00000018   6300               ORI     R16, 0x30
+   \   0000001A   ....               RCALL   LCDPutChar
+    171          }
+   \   0000001C   9508               RET
+    172          
+
+   \                                 In  segment CODE, align 2, keep-with-next
+    173          void LCDPrintBCD(unsigned char dgt)
+   \                     LCDPrintBCD:
+    174          {
+   \   00000000   2F30               MOV     R19, R16
+    175              LCDPutChar(0x30 | (dgt >>4));
+   \   00000002   2F03               MOV     R16, R19
+   \   00000004   9502               SWAP    R16
+   \   00000006   700F               ANDI    R16, 0x0F
+   \   00000008   6300               ORI     R16, 0x30
+   \   0000000A   ....               RCALL   LCDPutChar
+    176              LCDPutChar(0x30 | (dgt & 0x0F));
+   \   0000000C   703F               ANDI    R19, 0x0F
+   \   0000000E   6330               ORI     R19, 0x30
+   \   00000010   2F03               MOV     R16, R19
+   \   00000012   ....               RCALL   LCDPutChar
+    177          }
+   \   00000014   9508               RET
+    178          
+    179          
+
+   Maximum stack usage in bytes:
+
+   RSTACK Function
+   ------ --------
+      2   LCDClear
+        2   -> LCDWriteCtrl
+        2   -> WaitOnLCD
+      2   LCDGoTo
+        2   -> LCDWriteCtrl
+        2   -> WaitOnLCD
+      2   LCDInit
+        2   -> LCDWriteCtrl
+        2   -> PulseEN
+        2   -> WaitOnLCD
+      2   LCDLoadUserCharP
+        2   -> LCDWriteCtrl
+        2   -> LCDWriteData
+        2   -> WaitOnLCD
+      2   LCDPrintBCD
+        2   -> LCDPutChar
+      2   LCDPrintDgt
+        2   -> LCDPutChar
+        2 ?UC_DIVMOD_L01
+      2   LCDPrintDgtBl
+        2   -> LCDPutChar
+        2 ?UC_DIVMOD_L01
+      2   LCDPutChar
+        2   -> LCDWriteData
+        2   -> WaitOnLCD
+      2   LCDPuts
+        2   -> LCDWriteData
+        2   -> WaitOnLCD
+      2   LCDPutsCode
+        2   -> LCDWriteData
+        2   -> WaitOnLCD
+      2   LCDReadCtrl
+        2   -> ReadNibble
+      2   LCDReadData
+        2   -> ReadNibble
+      2   LCDWriteCtrl
+        2   -> PulseEN
+      2   LCDWriteData
+        2   -> PulseEN
+      2   LoadUserChar
+        2   -> LCDWriteCtrl
+        2   -> LCDWriteData
+        2   -> WaitOnLCD
+      2   PulseEN
+      2   ReadNibble
+      2   WaitOnLCD
+        2   -> LCDReadCtrl
+
+
+   Segment part sizes:
+
+   Bytes  Function/Label
+   -----  --------------
+       8  LCDClear
+      12  LCDGoTo
+     100  LCDInit
+      26  LCDLoadUserCharP
+      22  LCDPrintBCD
+      30  LCDPrintDgt
+      38  LCDPrintDgtBl
+      10  LCDPutChar
+      20  LCDPuts
+      20  LCDPutsCode
+      38  LCDReadCtrl
+      40  LCDReadData
+      20  LCDWriteCtrl
+      24  LCDWriteData
+      34  LoadUserChar
+      10  PulseEN
+      12  ReadNibble
+       8  WaitOnLCD
+       1  _A_DDRB
+       1  _A_PINB
+       1  _A_PORTB
+
+ 
+   3 bytes in segment ABSOLUTE
+ 472 bytes in segment CODE
+ 
+ 472 bytes of CODE memory
+   0 bytes of DATA memory (+ 3 bytes shared)
+
+Errors: none
+Warnings: none
